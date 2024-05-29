@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Template</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .task-list {
+      list-style: none;
+      padding: 0;
+    }
+    .task-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+    .task-actions button {
+      margin-left: 10px;
+    }
+    .filter-buttons, .add-task-form {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://www.unpkg.com/react@18.2.0/umd/react.development.js"></script>
+  <script src="https://www.unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script type="text/babel">
+    function App() {
+  const [tasks, setTasks] = React.useState([]);
+  const [newTask, setNewTask] = React.useState({ title: '', isCompleted: false, assignee: '' });
+  const [filter, setFilter] = React.useState('all');
+  const [assigneeFilter, setAssigneeFilter] = React.useState('');
+
+  React.useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    const response = await axios.get('http://localhost:3000/todos');
+    setTasks(response.data);
+  };
+
+  const addTask = async () => {
+    const response = await axios.post('http://localhost:3000/todos', newTask);
+    setTasks([...tasks, response.data]);
+    setNewTask({ title: '', isCompleted: false, assignee: '' });
+  };
+
+  const updateTask = async (id, updatedTask) => {
+    await axios.put(`http://localhost:3000/todos/${id}`, updatedTask);
+    setTasks(tasks.map(task => (task.id === id ? updatedTask : task)));
+  };
+
+  const deleteTask = async (id) => {
+    await axios.delete(`http://localhost:3000/todos/${id}`);
+    setTasks(tasks.filter(task => task.id !== id));
+  };
+
+  const filteredTasks = tasks.filter(task => {
+    if (filter === 'incomplete') return !task.isCompleted;
+    if (assigneeFilter) return task.assignee === assigneeFilter;
+    return true;
+  });
+
+  return (
+    <div>
+      <div className="add-task-form">
+        <input
+          type="text"
+          placeholder="Task Title"
+          value={newTask.title}
+          onChange={e => setNewTask({ ...newTask, title: e.target.value })}
+        />
+        <input
+          type="text"
+          placeholder="Assignee"
+          value={newTask.assignee}
+          onChange={e => setNewTask({ ...newTask, assignee: e.target.value })}
+        />
+        <button onClick={addTask}>Add Task</button>
+      </div>
+      <div className="filter-buttons">
+        <button onClick={() => setFilter('all')}>Show All Tasks</button>
+        <button onClick={() => setFilter('incomplete')}>Show Incomplete Tasks</button>
+        <input
+          type="text"
+          placeholder="Filter by Assignee"
+          value={assigneeFilter}
+          onChange={e => setAssigneeFilter(e.target.value)}
+        />
+      </div>
+      <ul className="task-list">
+        {filteredTasks.map(task => (
+          <li key={task.id} className="task-item">
+            <div>
+              <strong>{task.title}</strong>
+              <p>Assignee: {task.assignee}</p>
+              <p>Status: {task.isCompleted ? 'Completed' : 'Incomplete'}</p>
+            </div>
+            <div className="task-actions">
+              <button onClick={() => updateTask(task.id, { ...task, isCompleted: !task.isCompleted })}>
+                {task.isCompleted ? 'Mark Incomplete' : 'Mark Completed'}
+              </button>
+              <button onClick={() => deleteTask(task.id)}>Delete</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById('root'));
+
+  </script>
+</body>
+</html>
